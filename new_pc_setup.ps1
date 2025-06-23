@@ -1,9 +1,18 @@
-# PowerShell script to automate PC setup using winget.
-# Ensures admin rights, then checks for and installs a predefined list of apps.
+<#
+.SYNOPSIS
+Automates PC setup by installing predefined applications using winget.
 
-#--------------------------------------------------------------------------
-# 1. SCRIPT INITIALIZATION & PRIVILEGE CHECK
-#--------------------------------------------------------------------------
+.DESCRIPTION
+This script ensures administrator privileges, updates winget sources, and installs a list of predefined applications. It also performs post-installation configuration for tools like Git.
+
+Before running this script:
+1. Open PowerShell as Administrator.
+2. Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned` to allow script execution.
+
+#>
+
+
+#script initialization & privilege check
 function Ensure-Administrator {
     if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Warning "Admin privileges required. Relaunching..."
@@ -14,77 +23,70 @@ function Ensure-Administrator {
 }
 Ensure-Administrator
 
-#--------------------------------------------------------------------------
-# 2. APPLICATION DEFINITIONS
-#--------------------------------------------------------------------------
+# application definitions
 $applications = @{
-    # --- Browsers & Comms ---
+    #browsers & comms
     "Chrome"         = "Google.Chrome"
     "Firefox"        = "Mozilla.Firefox"
     "Discord"        = "Discord.Discord"
     "Teams"          = "Microsoft.Teams"
     "Outlook"        = "Microsoft.Outlook"
-    "Telegram"       = "Telegram.Desktop"
+    "Telegram"       = "Telegram.TelegramDesktop"
     "WhatsApp"       = "WhatsApp.WhatsApp"
 
-    # --- Development & API ---
+    #development & api
     "VS Code"        = "Microsoft.VisualStudioCode"
     "Git"            = "Git.Git"
-    "Golang"         = "Go.Go"
-    "Python 3"       = "Python.Python.3"
+    "Golang"         = "GoLang.Go"
+    "Python 3"       = "Python.Python.3.12"
     "NVM"            = "CoreyButler.NVMforWindows"
     "Postman"        = "Postman.Postman"
-    "Bruno"          = "usebruno.bruno"
+    "Bruno"          = "Bruno.Bruno"
     
-    # --- Java JDKs ---
-    "OpenJDK 8"      = "Microsoft.OpenJDK.8"
+    #java jdks
+    "OpenJDK 8 (Temurin)" = "EclipseAdoptium.Temurin.8.JDK"
     "OpenJDK 11"     = "Microsoft.OpenJDK.11"
     "OpenJDK 17"     = "Microsoft.OpenJDK.17"
-    "OpenJDK 22"     = "Microsoft.OpenJDK.22"
+    "OpenJDK 21"     = "Microsoft.OpenJDK.21"
 
-    # --- Database & FTP ---
-    "DBeaver"        = "dbeaver.dbeaver"
-    "MySQL Workbench"= "Oracle.MySQL.Workbench"
-    "FileZilla"      = "FileZilla.FileZilla.Client"
+    #database & ftp
+    "DBeaver"        = "DBeaver.DBeaver.Community"
+    "MySQL Workbench"= "Oracle.MySQLWorkbench"
+    "FileZilla"      = "FileZilla.FileZilla_Client"
     "PuTTY"          = "PuTTY.PuTTY"
 
-    # --- Utilities & Productivity ---
+    #utilities & productivity
     "7-Zip"          = "7zip.7zip"
-    "Google Drive"   = "Google.Drive"
     "Notepad++"      = "Notepad++.Notepad++"
     "Bitwarden"      = "Bitwarden.Bitwarden"
     "Notion"         = "Notion.Notion"
     "OBS Studio"     = "OBSProject.OBSStudio"
     "VLC"            = "VideoLAN.VLC"
 
-    # --- Store Apps ---
+    #store apps
     "Instagram"      = "9NBLGGH5L9XT"
-    "Netflix"        = "9NCBC7F2N2WJ"
+    "Netflix"        = "9WZDNCRFJ3TJ"
 }
 
-#--------------------------------------------------------------------------
-# 3. INSTALLATION ENGINE
-#--------------------------------------------------------------------------
+# installation engine
 Write-Host "`nUpdating winget sources..." -ForegroundColor Cyan
 winget source update
 
 Write-Host "`nStarting application setup..." -ForegroundColor Cyan
-
 foreach ($name in $applications.Keys | Sort-Object) {
     $id = $applications[$name]
     Write-Host "--------------------------------------------------"
     Write-Host "Processing: $name"
 
-    # Check if package is already installed
-    $isInstalled = winget list --id $id --accept-source-agreements | Select-String -Pattern $id -Quiet
+    $isInstalled = winget list --id $id --accept-source-agreements | Select-String -Pattern $id -Quiet -SimpleMatch
 
     if ($isInstalled) {
         Write-Host "[$name] is already installed. Skipping." -ForegroundColor Green
     } else {
         Write-Host "[$name] not found. Installing..." -ForegroundColor Yellow
         
-        # Install the package silently
-        winget install --id $id -e --source winget --accept-package-agreements --accept-source-agreements --silent
+        #install the package silently, allowing winget to use any source (incl. msstore)
+        winget install --id $id -e --accept-package-agreements --accept-source-agreements --silent
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[$name] installed successfully." -ForegroundColor Green
@@ -95,25 +97,24 @@ foreach ($name in $applications.Keys | Sort-Object) {
     Write-Host ""
 }
 
+# post-installation configuration
+Write-Host "`nRefreshing environment variables for this session..." -ForegroundColor Cyan
+#this allows the script to use newly installed command-line tools like Git immediately.
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-#--------------------------------------------------------------------------
-# 4. POST-INSTALLATION CONFIGURATION
-#--------------------------------------------------------------------------
 Write-Host "`nStarting post-installation configuration..." -ForegroundColor Cyan
 
-# --- Git Configuration ---
-# Check if Git was requested for installation before trying to configure it.
+# git configuration
 if ($applications.ContainsKey("Git")) {
     Write-Host "--------------------------------------------------"
     Write-Host "Configuring Git..."
     
-    # We assume git.exe is now in the PATH. If Git installation failed, these commands will also fail.
     try {
         git config --global user.name "alae-touba"
         git config --global user.email "alae2ba@gmail.com"
-        git config --global core.editor "code --wait" # --wait is crucial for git to work correctly with VS Code
+        git config --global core.editor "code --wait"
 
-        # Verify the configuration
+        #verify the configuration
         $gitUser = $(git config --global user.name)
         if ($gitUser -eq "alae-touba") {
             Write-Host "Git configured successfully for user: $gitUser (alae2ba@gmail.com)" -ForegroundColor Green
@@ -126,12 +127,9 @@ if ($applications.ContainsKey("Git")) {
     }
 }
 
-
-#--------------------------------------------------------------------------
-# 5. POST-INSTALLATION SUMMARY
-#--------------------------------------------------------------------------
+# post-installation summary
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " PC Setup Script Finished" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "NOTE: For 'Go', 'NVM', 'Python', and 'Java', open a NEW terminal for changes to apply." -ForegroundColor Yellow
+Write-Host "NOTE: For some applications (like Go, NVM, Python, Java), you may need to open a NEW terminal for all changes to fully apply." -ForegroundColor Yellow
 Write-Host "All requested applications have been processed." -ForegroundColor Green
