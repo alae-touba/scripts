@@ -277,6 +277,10 @@ function Configure-PowerShellProfile {
             @{
                 "Command" = "function work { Set-Location (Join-Path `$env:USERPROFILE 'work') }";
                 "DisplayName" = "work (navigate to work directory)"
+            },
+            @{
+                "Command" = "function github { Set-Location (Join-Path `$env:USERPROFILE 'work\github') }";
+                "DisplayName" = "github (navigate to github directory)"
             }
         )
 
