@@ -49,4 +49,5 @@ alias cat='batcat'
 
 # personal
 alias work='cd ~/work'
+alias github='cd ~/work/github'
 alias dai='cd ~/work/dev/DAI'
