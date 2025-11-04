@@ -34,6 +34,9 @@ alias mtree='mvn dependency:tree'
 alias update='sudo apt update && sudo apt upgrade -y'
 alias h='history'
 alias reload='source ~/.bashrc'
+alias c='clear'
+alias timestamp='date +%Y-%m-%dT%H-%M-%S'
+alias hg='history | grep'
 
 # files & Navigation
 alias ..='cd ..'
@@ -47,7 +50,12 @@ alias tree2='eza --tree --level=2'
 alias tree3='eza --tree --level=3'
 alias cat='batcat'
 
-# personal
+# personal & work
 alias work='cd ~/work'
 alias github='cd ~/work/github'
+alias scripts='cd ~/work/github/scripts'
+alias dev='cd ~/work/dev'
 alias dai='cd ~/work/dev/DAI'
+alias cash='cd ~/work/dev/cash'
+alias dev-env='cd ~/work/dev/dev-env'
+

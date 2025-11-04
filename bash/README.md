@@ -1,1 +1,4 @@
 first thing is to install git, clone the repo, run __git_local_conf.sh__, then run __install_aliases.sh__
+
+
+if you wanna add more aliases, just do it in **.bash_aliases** and run **roload**
