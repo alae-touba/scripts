@@ -58,4 +58,5 @@ alias dev='cd ~/work/dev'
 alias dai='cd ~/work/dev/DAI'
 alias cash='cd ~/work/dev/cash'
 alias dev-env='cd ~/work/dev/dev-env'
+alias mock='cd ~/work/dev/bkam-gisr-mock'
 
