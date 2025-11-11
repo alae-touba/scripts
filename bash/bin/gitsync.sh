@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  echo "gitsync: commits all changes and pushes"
+  echo "Usage: just run it"
+  exit 0
+fi
+
 # ─── COLORS ──────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
