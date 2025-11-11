@@ -23,6 +23,13 @@ echo "" >> "$BASHRC"
 echo "# Load custom aliases from scripts repo" >> "$BASHRC"
 echo "source $ALIASES_FILE" >> "$BASHRC"
 
+# Ensure personal bin folder is on PATH
+if ! grep -q "scripts/bash/bin" "$BASHRC"; then
+  echo "" >> "$BASHRC"
+  echo "# Add personal bin folder to PATH" >> "$BASHRC"
+  echo 'export PATH="$HOME/work/github/scripts/bash/bin:$PATH"' >> "$BASHRC"
+fi
+
 echo -e "${GREEN}✅ Aliases installed!${NC}"
 echo ""
 echo "Run: source ~/.bashrc"
