@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# ─── COLORS ──────────────────────────────────────────────────────────────────
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 # ─── CONFIGURE YOUR MESSAGE HERE (static, safe) ────────────────────────────
 COMMIT_MSG="auto: sync scripts"
 
@@ -15,9 +20,9 @@ if [[ -z "$(git status --porcelain)" ]]; then
   exit 0
 fi
 
-echo "=== $(git status --short | wc -l) files changed ==="
+echo -e "${YELLOW}=== $(git status --short | wc -l) files changed ===${NC}"
 git add -A
 git commit -m "$COMMIT_MSG"
 git push
 
-echo "✓ Synced: $COMMIT_MSG"
+echo -e "${GREEN}✓ Synced: $COMMIT_MSG${NC}"
