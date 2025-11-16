@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Load nvm if needed
+if [[ -z "$(declare -f nvm 2>/dev/null)" ]] && [[ -n "${NVM_DIR:-}" ]] && [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  source "$NVM_DIR/nvm.sh"
+fi
+
+declare -A VERSION_CMDS=(
+  ["java"]="java --version"
+  ["maven"]="mvn --version"
+  ["node"]="node --version"
+  ["npm"]="npm --version"
+  ["nvm"]="nvm --version"
+  ["angular"]="ng version"
+  ["docker"]="docker --version"
+  ["git"]="git --version"
+  ["python"]="python3 --version"
+  ["go"]="go version"
+)
+
+show_tool() {
+  local tool="$1"
+  local cmd="${VERSION_CMDS[$tool]:-}"
+  
+  if [[ -z "$cmd" ]]; then
+    echo -e "${RED}✗${NC} $tool: unknown tool"
+    return 1
+  fi
+  
+  local check_cmd="${cmd%% *}"
+  if ! type "$check_cmd" &>/dev/null; then
+    echo -e "${RED}✗${NC} $tool: not installed"
+    return 1
+  fi
+  
+  echo -e "${GREEN}✓${NC} $tool:"
+  $cmd 2>&1 | head -n1 | sed 's/^/  /'
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  echo "Usage: showversions [tool]"
+  echo "Tools: ${!VERSION_CMDS[*]}"
+  exit 0
+fi
+
+if [[ -n "${1:-}" ]]; then
+  show_tool "$1"
+else
+  echo -e "${YELLOW}=== Development Tool Versions ===${NC}"
+  for tool in "${!VERSION_CMDS[@]}"; do
+    show_tool "$tool"
+  done
+fi
