@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "gitsync: commits all changes and pushes"
+  echo "git-sync: commits all changes and pushes"
   echo "Usage: just run it"
   exit 0
 fi
@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # ─── CONFIGURE YOUR MESSAGE HERE (static, safe) ────────────────────────────
-COMMIT_MSG="auto: sync scripts"
+COMMIT_MSG="auto: sync scripts - $(date '+%Y-%m-%d %H:%M')"
 
 # ─── SCRIPT LOGIC (NO EDITS NEEDED BELOW) ──────────────────────────────────
 if ! git rev-parse --git-dir &>/dev/null; then
