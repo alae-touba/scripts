@@ -179,14 +179,14 @@ fi
 
 # --- Install Aliases ---
 echo "--> Installing custom aliases..."
-INSTALL_ALIASES_SCRIPT="$SCRIPTS_DIR/bash/install-aliases.sh"
+INSTALL_ALIASES_SCRIPT="$SCRIPTS_DIR/bash/install-aliases"
 
 if [ -f "$INSTALL_ALIASES_SCRIPT" ]; then
-    echo "    Running install-aliases.sh..."
+    echo "    Running install-aliases..."
     chmod +x "$INSTALL_ALIASES_SCRIPT"
     bash "$INSTALL_ALIASES_SCRIPT"
 else
-    echo "    WARNING: install-aliases.sh not found at: $INSTALL_ALIASES_SCRIPT"
+    echo "    WARNING: install-aliases not found at: $INSTALL_ALIASES_SCRIPT"
     echo "    Please check your scripts repository structure"
 fi
 # --- End Aliases Installation ---
