@@ -1,69 +1,110 @@
-
 #!/bin/bash
 set -euo pipefail
 
-# ─── COLORS ───────────────────────────────────────────────────────────────────
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# ─── FLAGS ────────────────────────────────────────────────────────────────────
+# Flags
 QUIET=${QUIET:-0}   # Set QUIET=1 to suppress "not found" warnings
 
-# ─── UTILITIES ────────────────────────────────────────────────────────────────
+# Utilities
 section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 ok()      { echo -e "${GREEN}$1${NC}"; }
 warn()    { echo -e "${YELLOW}$1${NC}"; }
 fail()    { echo -e "${RED}$1${NC}"; }
 
-# ─── DETECT WSL ONCE ─────────────────────────────────────────────────────────
+# Detect WSL once
 IS_WSL=0
 [[ "$(uname -r)" == *icrosoft* ]] && IS_WSL=1
 
-# ─── CORE INFO ────────────────────────────────────────────────────────────────
+
+(( IS_WSL )) && echo "(Running inside WSL2 — stats limited to this distro)"
+echo ""
+
+# Core info
 section "SYSTEM INFO"
-echo "Hostname: $(hostname)"
-echo "User: $(whoami)"
-echo "Date: $(date '+%Y-%m-%d %H:%M')"
-echo "Uptime: $(uptime -p)"
+printf "%-12s %s\n" "Hostname:" "$(ok "$(hostname)")"
+printf "%-12s %s\n" "User:"     "$(ok "$(whoami)")"
 
-# ─── OS & KERNEL ─────────────────────────────────────────────────────────────
-section "OS & KERNEL"
 if command -v lsb_release &>/dev/null; then
-  lsb_release -d 2>/dev/null || true
+  os_desc=$(lsb_release -d 2>/dev/null | cut -f2-)
 else
-  grep PRETTY_NAME /etc/os-release | cut -d '"' -f2 || true
+  os_desc=$(grep PRETTY_NAME /etc/os-release | cut -d '"' -f2)
 fi
-echo "Kernel: $(uname -r)"
-(( IS_WSL )) && echo "(Running inside WSL2)"
+os_desc=${os_desc:-"Unknown"}
+printf "%-12s %s\n" "OS:"     "$(ok "$os_desc")"
+printf "%-12s %s\n" "Kernel:" "$(ok "$(uname -r)")"
 
-# ─── MEMORY ───────────────────────────────────────────────────────────────────
+if (( IS_WSL )); then
+  echo ""
+  echo "Windows path: $(wslpath -w ~ 2>/dev/null)"
+  echo "Kernel line: $(head -n1 /proc/version)"
+
+  echo -n "VPN reachability: "
+  winip=$(grep nameserver /etc/resolv.conf | awk '{print $2}' | head -n 1)
+  if [[ -n "$winip" ]] && nc -zvw1 "$winip" 3128 &>/dev/null; then
+    ok "OK (proxy reachable at $winip:3128)"
+  else
+    warn "Not reachable (check VPN/proxy)"
+  fi
+fi
+
+# Memory
 section "MEMORY"
-free -h | grep -E 'Mem|Swap'
+free -h
+(( IS_WSL )) && echo "Note: memory reflects only the RAM allocated to this WSL distro."
 
-# ─── CPU ──────────────────────────────────────────────────────────────────────
+# CPU
 section "CPU"
 lscpu | grep -E 'Model name|CPU\(s\)|Thread|Core' | head -n 10
 
-# ─── DISK ─────────────────────────────────────────────────────────────────────
+echo ""
+
+load_avg=$(uptime | awk -F'load average:' '{ print $2 }' | sed 's/,/, /g')
+cpu_count=$(nproc)
+load1=$(printf "%s" "$load_avg" | awk -F, '{ gsub(/ /, ""); print $1 }')
+load_ratio=$(awk "BEGIN { printf \"%.2f\", $load1 / $cpu_count }")
+load_status=$(awk "BEGIN { v = $load_ratio; if (v >= 1.5) print \"high\"; else if (v >= 1.0) print \"busy\"; else if (v >= 0.5) print \"normal\"; else print \"idle\" }")
+printf "Load Average (1m/5m/15m): %s (%s load vs %s CPUs)\n" "$load_avg" "$load_status" "$cpu_count"
+
+# Disk
 section "DISK USAGE"
-if (( IS_WSL )); then
-  echo "(WSL detected — showing Windows drives only)"
-  df -h | grep -E '/mnt/[a-z]'
+df -h
+
+
+# Network
+section "NETWORK"
+printf "%-16s %-10s %s\n" "Interface" "State" "Addresses"
+ip -brief address show | grep -E 'eth|wlan|docker|lo' | while read -r iface state rest; do
+  printf "%-16s %-10s %s\n" "$iface" "$state" "$rest"
+done
+
+echo ""
+default_route=$(ip route | awk '/^default/ {print; exit}')
+if [[ -n "$default_route" ]]; then
+  printf "%-16s %s\n" "Default route:" "$default_route"
 else
-  df -h --total | grep -E 'Filesystem|total'
+  printf "%-16s %s\n" "Default route:" "No default route"
+fi
+
+public_ip=""
+if command -v curl &>/dev/null; then
+  public_ip=$(curl -sS --max-time 2 https://ifconfig.me 2>/dev/null)
+elif command -v dig &>/dev/null; then
+  public_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
+fi
+if [[ -n "$public_ip" ]]; then
+  printf "%-16s %s\n" "Public IP:" "$public_ip"
+else
+  printf "%-16s %s\n" "Public IP:" "Unreachable"
 fi
 
 
-# ─── NETWORK ──────────────────────────────────────────────────────────────────
-section "NETWORK"
-ip -brief address show | grep -E 'eth|wlan|docker|lo'
-echo "Default route:"
-ip route | grep default || echo "No default route"
-
-# ─── DOCKER ───────────────────────────────────────────────────────────────────
+# Docker
 if command -v docker &>/dev/null; then
   section "DOCKER"
   if docker info &>/dev/null; then
@@ -78,26 +119,4 @@ if command -v docker &>/dev/null; then
   else
     fail "Docker daemon not running"
   fi
-fi
-
-# ─── WSL SECTION ──────────────────────────────────────────────────────────────
-if (( IS_WSL )); then
-  section "WSL ENVIRONMENT"
-  
-  echo "Windows path: $(wslpath -w ~ 2>/dev/null)"
-  echo "Kernel line: $(head -n1 /proc/version)"
-  
-  # VPN / Proxy reachability
-  echo -n "VPN reachability: "
-  winip=$(grep nameserver /etc/resolv.conf | awk '{print $2}' | head -n 1)
-  if [[ -n "$winip" ]] && nc -zvw1 "$winip" 3128 &>/dev/null; then
-    ok "OK (proxy reachable at $winip:3128)"
-  else
-    warn "Not reachable (check VPN/proxy)"
-  fi
-
-  # Show current Windows drives status (fast version)
-  echo
-  echo "Mounted Windows drives:"
-  df -h | grep -E '/mnt/[a-z]' | awk '{printf "%-8s %-6s %-6s %-6s %-4s\n",$6,$2,$3,$4,$5}'
 fi

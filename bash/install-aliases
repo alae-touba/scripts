@@ -1,0 +1,35 @@
+#!/bin/bash
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+ALIASES_FILE="$HOME/work/github/scripts/bash/.bash_aliases"
+BASHRC="$HOME/.bashrc"
+
+echo -e "${YELLOW}Installing bash aliases...${NC}"
+
+# Backup .bashrc
+echo -e "${YELLOW}Creating backup of .bashrc...${NC}"
+cp "$BASHRC" "$BASHRC.backup.$(date +%Y%m%d_%H%M%S)"
+echo "✅ Backup created"
+
+echo -e "${YELLOW}Configuring .bashrc...${NC}"
+
+# 1. Remove OLD entries
+sed -i '\|source.*scripts/bash/.bash_aliases|d' "$BASHRC"
+sed -i '\|scripts/bash/bin|d' "$BASHRC"
+
+# 2. Remove trailing newlines (keeps file clean)
+sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' "$BASHRC"
+
+# 3. Append fresh configuration (Code only, no comments)
+{
+  echo ""
+  echo "source $ALIASES_FILE"
+  echo 'export PATH="$HOME/work/github/scripts/bash/bin:$PATH"'
+} >> "$BASHRC"
+
+echo -e "${GREEN}✅ Aliases and PATH installed!${NC}"
+echo ""
+echo "Run: source ~/.bashrc"

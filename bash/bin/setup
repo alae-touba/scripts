@@ -1,0 +1,205 @@
+#!/bin/bash
+set -e
+
+# Constants
+SCRIPTS_REPO_URL="https://github.com/alae-touba/scripts"
+
+echo ">>> Starting WSL Environment Setup..."
+
+# Update package lists
+sudo apt-get update
+
+# Install core utilities
+sudo apt-get install -y curl git zip unzip dos2unix htop bat eza
+
+# --- NVM & Node.js Setup ---
+echo "--> Installing NVM (Node Version Manager)..."
+if [ ! -d "$HOME/.nvm" ]; then
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+fi
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+echo "--> Installing multiple Node.js versions..."
+nvm install 18 && nvm install 20 && nvm install 22 && nvm install --lts
+nvm alias default 'lts/*'
+# --- End NVM & Node.js Setup ---
+
+
+# --- SDKMAN & Java Setup ---
+echo "--> Installing SDKMAN (Software Development Kit Manager)..."
+if [ ! -d "$HOME/.sdkman" ]; then
+    curl -s "https://get.sdkman.io" | bash
+fi
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# Function to get the latest Temurin identifier for a major version
+get_latest_java_identifier() {
+    local major_version=$1
+    local identifier
+    
+    # Get all Temurin versions, extract the identifier column (last column), and find the first match
+    identifier=$(sdk list java | grep tem | awk '{print $NF}' | grep "^${major_version}[.u]" | head -1)
+    
+    echo "$identifier"
+}
+
+# Function to install Java version
+install_java_version() {
+    local major_version=$1
+    local identifier
+    
+    echo "--> Finding latest Java $major_version from Temurin..." >&2
+    identifier=$(get_latest_java_identifier "$major_version")
+    
+    if [ -n "$identifier" ]; then
+        echo "    Found: $identifier" >&2
+        echo "    Installing..." >&2
+        sdk install java "$identifier" >&2
+        echo "$identifier"
+    else
+        echo "    WARNING: Could not find Java $major_version" >&2
+        return 1
+    fi
+}
+
+echo "--> Installing Java versions..."
+
+# Install each version and capture the Java 21 identifier
+install_java_version 8 > /dev/null
+install_java_version 11 > /dev/null
+install_java_version 17 > /dev/null
+JAVA_21_IDENTIFIER=$(install_java_version 21)
+
+# Set Java 21 as default
+if [ -n "$JAVA_21_IDENTIFIER" ]; then
+    echo "--> Setting Java 21 as default..."
+    echo "    Using identifier: $JAVA_21_IDENTIFIER"
+    sdk default java "$JAVA_21_IDENTIFIER"
+fi
+
+# Verification
+echo "--> Verifying installations:"
+sdk version
+echo "--> Installed Java versions:"
+sdk list java | grep installed
+echo "--> Default Java version:"
+java -version
+# --- End SDKMAN & Java Setup ---
+
+
+# --- Maven Setup ---
+echo "--> Installing Maven via SDKMAN..."
+
+# Check if Maven exists anywhere
+if command -v mvn &> /dev/null; then
+    CURRENT_MVN_PATH=$(which mvn)
+    echo "    Existing Maven found at: $CURRENT_MVN_PATH"
+    
+    if [[ "$CURRENT_MVN_PATH" == /mnt/* ]]; then
+        echo "    ⚠️  This is a Windows Maven installation"
+    fi
+fi
+
+# Install SDKMAN Maven regardless (it won't reinstall if already present)
+echo "    Installing WSL-native Maven..."
+sdk install maven
+
+# Verify which Maven is now active
+echo "--> Verifying Maven installation:"
+echo "    Active Maven: $(which mvn)"
+mvn --version
+
+# Check if SDKMAN Maven is first in PATH
+SDKMAN_MVN="$HOME/.sdkman/candidates/maven/current/bin/mvn"
+if [[ "$(which mvn)" == "$SDKMAN_MVN" ]]; then
+    echo "    ✅ SDKMAN Maven is active"
+else
+    echo "    ⚠️  WARNING: SDKMAN Maven is NOT active!"
+    echo "    You may need to check your PATH order in ~/.bashrc"
+    echo "    SDKMAN paths should come before Windows paths"
+fi
+# --- End Maven Setup ---
+
+
+# --- Starship Prompt Setup ---
+echo "--> Installing Starship prompt..."
+if ! command -v starship &> /dev/null; then
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
+else
+    echo "    Starship is already installed"
+fi
+
+echo "--> Configuring Starship in ~/.bashrc..."
+if ! grep -q "starship init bash" "$HOME/.bashrc"; then
+    echo '' >> "$HOME/.bashrc"
+    echo '# Starship prompt' >> "$HOME/.bashrc"
+    echo 'eval "$(starship init bash)"' >> "$HOME/.bashrc"
+    echo "    Added Starship initialization to ~/.bashrc"
+else
+    echo "    Starship is already configured in ~/.bashrc"
+fi
+# --- End Starship Prompt Setup ---
+
+
+# --- Create Workspace Folder Structure ---
+echo "--> Creating workspace folder structure..."
+WORKSPACE_DIRS=(
+    "$HOME/work/github"
+    "$HOME/work/dev"
+)
+
+for dir in "${WORKSPACE_DIRS[@]}"; do
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+        echo "    Created: $dir"
+    else
+        echo "    Already exists: $dir"
+    fi
+done
+# --- End Workspace Folder Structure ---
+
+
+# --- Clone Scripts Repository ---
+echo "--> Setting up scripts repository..."
+SCRIPTS_DIR="$HOME/work/github/scripts"
+
+if [ ! -d "$SCRIPTS_DIR" ]; then
+    echo "    Cloning scripts repository from: $SCRIPTS_REPO_URL"
+    git clone "$SCRIPTS_REPO_URL" "$SCRIPTS_DIR"
+    echo "    Scripts repository cloned successfully"
+else
+    echo "    Scripts directory already exists at: $SCRIPTS_DIR"
+    echo "    Pulling latest changes..."
+    cd "$SCRIPTS_DIR"
+    git pull
+    cd -
+fi
+# --- End Scripts Repository Setup ---
+
+
+# --- Install Aliases ---
+echo "--> Installing custom aliases..."
+INSTALL_ALIASES_SCRIPT="$SCRIPTS_DIR/bash/install-aliases.sh"
+
+if [ -f "$INSTALL_ALIASES_SCRIPT" ]; then
+    echo "    Running install-aliases.sh..."
+    chmod +x "$INSTALL_ALIASES_SCRIPT"
+    bash "$INSTALL_ALIASES_SCRIPT"
+else
+    echo "    WARNING: install-aliases.sh not found at: $INSTALL_ALIASES_SCRIPT"
+    echo "    Please check your scripts repository structure"
+fi
+# --- End Aliases Installation ---
+
+
+echo ""
+echo ">>> WSL setup script finished."
+echo "✅  Core utilities (curl, git, zip, unzip, dos2unix, htop, bat, eza) are installed."
+echo "✅  NVM and Node.js versions (18, 20, 22, LTS) are installed."
+echo "✅  SDKMAN and Java versions (8, 11, 17, 21) are installed."
+echo "✅  Maven is installed via SDKMAN."
+echo "✅  Starship prompt is installed and configured."
+echo "✅  Workspace folders (~/work/github, ~/work/dev) are created."
+echo "✅  Scripts repository and aliases are set up."
+echo ""
+echo "❗️  IMPORTANT: Run 'source ~/.bashrc' or close and reopen your terminal."
