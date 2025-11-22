@@ -11,7 +11,7 @@ This directory holds the helper scripts that keep a WSL development shell aligne
 
 ## Aliases & PATH
 
-Custom shortcuts live in `bash/.bash_aliases`; edit that file to add or remove aliases, then re-run `bash/install-aliases` if the file should be re-sourced and `bash/bin` re-added to `PATH`.
+Custom shortcuts live in `bash/bash_aliases`; edit that file to add or remove aliases, then re-run `bash/install-aliases` if the file should be re-sourced and `bash/bin` re-added to `PATH`.
 
 Some highlights shipped by default:
 - Docker shortcuts (`dps`, `dpsa`, `di`, etc.)
