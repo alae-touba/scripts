@@ -18,6 +18,8 @@ alias ga='git add'
 alias gc='git commit'
 alias gco='git checkout'
 alias glog='git log --oneline --graph --decorate'
+alias gcl='git config --local --list'
+alias gcg='git config --global --list'
 
 
 # Maven shortcuts
