@@ -159,6 +159,13 @@ done
 # --- End Workspace Folder Structure ---
 
 
+# --- Git Configuration ---
+echo "--> Configuring Git..."
+git config --global credential.helper store
+echo "    Git credential helper set to 'store'"
+# --- End Git Configuration ---
+
+
 # --- Clone Scripts Repository ---
 echo "--> Setting up scripts repository..."
 SCRIPTS_DIR="$HOME/work/github/scripts"
