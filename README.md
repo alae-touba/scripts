@@ -18,7 +18,7 @@ Get-Help <script-path>
 
 ### Examples
 
-To see usage examples for a script, use the `-Examples` parameter:
+to see usage examples for a script, use the `-Examples` parameter:
 
 ```powershell
 Get-Help <script-path> -Examples
