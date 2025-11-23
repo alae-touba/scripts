@@ -8,7 +8,7 @@ alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 
 
-# Git shortcuts
+# git shortcuts
 alias gs='git status'
 alias gpush='git push'
 alias gpull='git pull'
