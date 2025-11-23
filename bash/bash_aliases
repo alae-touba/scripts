@@ -22,7 +22,7 @@ alias gcl='git config --local --list'
 alias gcg='git config --global --list'
 
 
-# Maven shortcuts
+# maven shortcuts
 alias mc='mvn clean'
 alias mci='mvn clean install'
 alias mcis='mvn clean install -DskipTests'
